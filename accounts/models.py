@@ -2,8 +2,15 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db.models.fields.related import ForeignKey, OneToOneField
 
-from django.contrib.gis.db import models as gismodels
-from django.contrib.gis.geos import Point
+from django.conf import settings
+
+# Import GeoDjango types only when GIS support is enabled
+if getattr(settings, 'USE_GIS', False):
+    from django.contrib.gis.db import models as gismodels
+    from django.contrib.gis.geos import Point
+else:
+    gismodels = None
+    Point = None
 
 # Create your models here.
 class UserManager(BaseUserManager):
@@ -98,7 +105,11 @@ class UserProfile(models.Model):
     pin_code = models.CharField(max_length=6, blank=True, null=True)
     latitude = models.CharField(max_length=20, blank=True, null=True)
     longitude = models.CharField(max_length=20, blank=True, null=True)
-    location = gismodels.PointField(blank=True, null=True, srid=4326)
+    if getattr(settings, 'USE_GIS', False):
+        location = gismodels.PointField(blank=True, null=True, srid=4326)
+    else:
+        # Fallback when GIS is not enabled: store as simple text (lon,lat)
+        location = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
 
@@ -110,9 +121,11 @@ class UserProfile(models.Model):
 
 
     def save(self, *args, **kwargs):
-        if self.latitude and self.longitude:
+        if self.latitude and self.longitude and Point is not None:
             self.location = Point(float(self.longitude), float(self.latitude))
-            return super(UserProfile, self).save(*args, **kwargs)
+        elif self.latitude and self.longitude:
+            # store as "lon,lat" string when GIS not enabled
+            self.location = f"{self.longitude},{self.latitude}"
         return super(UserProfile, self).save(*args, **kwargs)
 
 

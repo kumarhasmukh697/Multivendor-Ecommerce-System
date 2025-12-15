@@ -3,9 +3,17 @@ from django.http import HttpResponse
 
 from vendor.models import Vendor
 
-from django.contrib.gis.geos import GEOSGeometry
-from django.contrib.gis.measure import D # ``D`` is a shortcut for ``Distance``
-from django.contrib.gis.db.models.functions import Distance
+from django.conf import settings
+
+# GIS imports are optional
+if getattr(settings, 'USE_GIS', False):
+    from django.contrib.gis.geos import GEOSGeometry
+    from django.contrib.gis.measure import D # ``D`` is a shortcut for ``Distance``
+    from django.contrib.gis.db.models.functions import Distance
+else:
+    GEOSGeometry = None
+    D = None
+    Distance = None
 
 
 def get_or_set_current_location(request):
@@ -24,8 +32,7 @@ def get_or_set_current_location(request):
 
 
 def home(request):
-    if get_or_set_current_location(request) is not None:
-
+    if get_or_set_current_location(request) is not None and getattr(settings, 'USE_GIS', False):
         pnt = GEOSGeometry('POINT(%s %s)' % (get_or_set_current_location(request)))
 
         vendors = Vendor.objects.filter(user_profile__location__distance_lte=(pnt, D(km=1000))).annotate(distance=Distance("user_profile__location", pnt)).order_by("distance")
