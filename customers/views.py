@@ -43,6 +43,7 @@ def my_orders(request):
 
 
 def order_detail(request, order_number):
+    print("order detail function called")
     try:
         order = Order.objects.get(order_number=order_number, is_ordered=True)
         ordered_food = OrderedFood.objects.filter(order=order)
