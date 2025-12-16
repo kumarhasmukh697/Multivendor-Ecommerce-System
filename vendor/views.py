@@ -4,6 +4,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db import IntegrityError
 
+
 from menu.forms import CategoryForm, FoodItemForm
 from orders.models import Order, OrderedFood
 import vendor
